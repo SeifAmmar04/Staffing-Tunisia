@@ -4,7 +4,18 @@ import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class ContactService {
-
+async findAll() {
+    const result = await pool.query(
+      `SELECT * FROM "Contact" ORDER BY "createdAt" DESC`
+    );
+    return result.rows;
+  }
+ 
+  // ── Supprimer un contact ──────────────────────────────────────────
+  async delete(id: number) {
+    await pool.query(`DELETE FROM "Contact" WHERE id = $1`, [id]);
+    return { message: 'Contact supprimé' };
+  }
   async sendContact(data: any) {
     // ✅ 1. Sauvegarde dans PostgreSQL
     await pool.query(

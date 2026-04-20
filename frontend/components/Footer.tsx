@@ -66,8 +66,8 @@ export default function Footer() {
           <div>
             <h3 className="footer-title">EXPERTISE</h3>
             <ul className="space-y-3">
-              <li><Link href="/services-eor" className="footer-link">Services EOR</Link></li>
-              <li><Link href="/paie" className="footer-link">Externalisation Paie</Link></li>
+              <li><Link href="/eor-services" className="footer-link">Services EOR</Link></li>
+              <li><Link href="/Externalisation-Paie" className="footer-link">Externalisation Paie</Link></li>
               <li><Link href="/recrutement" className="footer-link">Recrutement (4 packs)</Link></li>
               <li><Link href="/conseil-rh" className="footer-link">Conseil RH</Link></li>
             </ul>
@@ -79,8 +79,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link href="/" className="footer-link">Accueil</Link></li>
               <li><Link href="/about" className="footer-link">À propos</Link></li>
-              <li><Link href="/resources" className="footer-link">Ressources</Link></li>
-              <li><Link href="/careers" className="footer-link">Offres Emploi</Link></li>
+              <li><Link href="/offres-emploi" className="footer-link">Offres Emploi</Link></li>
               <li><Link href="/careers" className="footer-link">Blog</Link></li>
               <li><Link href="/contact" className="footer-link">Contact</Link></li>
             </ul>

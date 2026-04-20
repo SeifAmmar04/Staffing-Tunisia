@@ -29,7 +29,7 @@ const steps = [
       <div className="mt-30" ><Navbar /></div>
 
   {/* HERO */}
-<section className="pt-40 m-15  pb-24 bg-gray-100 text-gray-900 rounded-2xl">
+<section className="pt-40 m-15  pb-24 bg-gradient-to-r from-[#020617] via-[#020617] to-[#0a1a2f]  text-gray-900 rounded-2xl">
   <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
 
     {/* TEXTE */}
@@ -38,15 +38,13 @@ const steps = [
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6 }}
     >
-      <p className="text-blue-500 font-semibold mb-5 text-lg">
-        --- Recrutement & Talent Acquisition
-      </p>
 
-      <h1 className="text-6xl font-bold mb-8 leading-tight text-blue-950">
+
+      <h1 className="text-6xl font-bold mb-8 leading-tight text-red-400">
         Simplifiez vos recrutements
       </h1>
 
-      <p className="text-gray-600 text-xl mb-10 leading-relaxed max-w-xl">
+      <p className="text-white  text-xl mb-10 leading-relaxed max-w-xl">
         Nous accompagnons les entreprises dans l'identification,
         l'évaluation et l'intégration des meilleurs talents,
         quel que soit le secteur d'activité.

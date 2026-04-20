@@ -4,6 +4,131 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
+  async findAllCandidates() {
+    const result = await pool.query(
+      `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
+       FROM "User"
+       WHERE role = 'CANDIDATE'
+       ORDER BY "createdAt" DESC`
+    );
+    return result.rows;
+  }
+
+  // ✅ CORRIGÉ : Retourner le phone correctement (pas NULL)
+  async findById(id: number) {
+    // ✅ APRÈS (corrigé)
+const result = await pool.query(
+  `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
+   FROM "User" WHERE id = $1`,
+  [id]
+);
+    
+    if (!result.rows[0]) {
+      throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
+    }
+
+    const user = result.rows[0];
+    
+    // ✅ Nettoyer les données : pas de NULL, pas de strings vides
+    // ✅ APRÈS
+return {
+  ...user,
+  phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+  firstName: user.firstName || "",
+  lastName: user.lastName || "",
+  email: user.email || "",
+  // ← plus de resume_path / resume_name
+};
+  }
+
+  // ✅ CORRIGÉ : Compléter le RETURNING et ajouter les colonnes manquantes
+  async update(id: number, data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  }) {
+    const existing = await pool.query(
+      `SELECT id FROM "User" WHERE id = $1`,
+      [id]
+    );
+    if (existing.rows.length === 0) {
+      throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
+    }
+
+    if (data.email) {
+      const emailCheck = await pool.query(
+        `SELECT id FROM "User" WHERE email = $1 AND id != $2`,
+        [data.email, id]
+      );
+      if (emailCheck.rows.length > 0) {
+        throw new HttpException('Email déjà utilisé', HttpStatus.BAD_REQUEST);
+      }
+    }
+
+    // ✅ CORRIGÉ : Compléter le RETURNING avec toutes les colonnes
+    const result = await pool.query(
+      `UPDATE "User"
+       SET 
+         "firstName" = COALESCE($1, "firstName"),
+         "lastName"  = COALESCE($2, "lastName"),
+         email       = COALESCE($3, email),
+         phone       = COALESCE($4, phone)
+       WHERE id = $5
+       RETURNING id, "firstName", "lastName", email, phone, role, "createdAt"`,
+      [
+        data.firstName ?? null,
+        data.lastName ?? null,
+        data.email ?? null,
+        data.phone ?? null,
+        id,
+      ]
+    );
+
+    if (!result.rows[0]) {
+      throw new HttpException('Erreur lors de la mise à jour', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    const user = result.rows[0];
+    
+    // ✅ Nettoyer les données de réponse
+    return {
+      ...user,
+      phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+    };
+  }
+
+  async changePassword(id: number, currentPassword: string, newPassword: string) {
+    const result = await pool.query(
+      `SELECT password FROM "User" WHERE id = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, result.rows[0].password);
+    if (!isMatch) {
+      throw new HttpException('Mot de passe actuel incorrect', HttpStatus.BAD_REQUEST);
+    }
+
+    if (newPassword.length < 6) {
+      throw new HttpException('Le nouveau mot de passe doit contenir au moins 6 caractères', HttpStatus.BAD_REQUEST);
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      `UPDATE "User" SET password = $1 WHERE id = $2`,
+      [hashed, id]
+    );
+
+    return { message: 'Mot de passe modifié avec succès' };
+  }
+
+  async delete(id: number) {
+    await pool.query(`DELETE FROM "User" WHERE id = $1`, [id]);
+    return { message: 'Candidat supprimé' };
+  }
 
   async checkEmail(email: string) {
     const result = await pool.query(
@@ -11,6 +136,27 @@ export class UsersService {
       [email]
     );
     return { exists: result.rows.length > 0 };
+  }
+
+  // ✅ NOUVEAU : findByEmail pour la connexion Google/OAuth
+  async findByEmail(email: string) {
+    const result = await pool.query(
+      `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
+       FROM "User" WHERE email = $1`,
+      [email]
+    );
+    
+    if (!result.rows[0]) {
+      throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
+    }
+
+    const user = result.rows[0];
+    
+    // ✅ Nettoyer les données
+    return {
+      ...user,
+      phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+    };
   }
 
   async create(data: any) {
@@ -33,18 +179,24 @@ export class UsersService {
         `INSERT INTO "User"
         ("firstName","lastName","phone","email","password","role","createdAt")
         VALUES ($1,$2,$3,$4,$5,$6,NOW())
-        RETURNING *`,
+        RETURNING id, "firstName", "lastName", email, phone, role, "createdAt"`,
         [
           data.firstName,
           data.lastName,
-          data.phone,
+          data.phone || "",  // ✅ S'assurer que phone n'est pas NULL
           data.email,
           hashedPassword,
-          'CANDIDATE',  // ← majuscules pour correspondre au type ENUM
+          'CANDIDATE',
         ]
       );
 
-      return result.rows[0];
+      const user = result.rows[0];
+      
+      // ✅ Nettoyer les données de réponse
+      return {
+        ...user,
+        phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+      };
 
     } catch (error: any) {
       console.error("DB ERROR:", error);

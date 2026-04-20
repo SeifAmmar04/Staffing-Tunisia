@@ -229,19 +229,19 @@ export default function AboutPage() {
     </section>
 
       {/* MISSION */}
-      <section className="py-20 px-6 md:px-16 bg-gradient-to-r from-black to-gray-800 text-white rounded-2xl mx-6 md:mx-16">
-        <h2 className="text-3xl font-bold text-center mb-6">
+      <section className="py-20 px-6 md:px-16   rounded-2xl mx-6 md:mx-16">
+        <h2 className="text-3xl font-bold text-black text-center mb-6">
           Notre mission
         </h2>
 
-        <p className="text-center text-gray-300 mb-10">
+        <p className="text-center text-gray-800 mb-10">
           Transformer les besoins des entreprises en solutions optimales.
         </p>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 ">
 
-          <div className="border border-gray-700 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold mb-2">
+          <div className="border border-gray-700 p-6 rounded-xl bg-gradient-to-r from-[#020617] via-[#020617] to-[#0a1a2f] ">
+            <h3 className="text-lg text-white font-semibold mb-2">
               Accompagnement stratégique
             </h3>
             <p className="text-gray-400">
@@ -249,8 +249,8 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="border border-gray-700 p-6 rounded-xl">
-            <h3 className="text-lg font-semibold mb-2">
+          <div className="border border-gray-700 p-6 rounded-xl bg-gradient-to-r from-[#020617] via-[#020617] to-[#0a1a2f]">
+            <h3 className="text-lg font-semibold mb-2 text-white">
               Solutions sur mesure
             </h3>
             <p className="text-gray-400">
@@ -483,13 +483,13 @@ export default function AboutPage() {
       </section>
 
       {/* CERTIFICATIONS */}
-      <section className="py-20 pb-32 px-6 md:px-16 bg-gradient-to-r from-[#020617] via-[#020617] to-[#0a1a2f] text-white">
+      <section className="py-20 pb-32 px-6 md:px-16  text-white">
   
   <p className="text-red-500 uppercase text-center mb-4">
     RECONNAISSANCE
   </p>
 
-  <h2 className="text-4xl text-center font-bold mb-10">
+  <h2 className="text-4xl text-center text-black font-bold mb-10">
     Certifications
   </h2>
 

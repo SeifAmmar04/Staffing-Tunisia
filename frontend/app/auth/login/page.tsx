@@ -127,9 +127,9 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-              <p className="text-sm text-gray-500 mt-3 hover:underline cursor-pointer">
+              <a href="reset-mail" className="text-sm text-gray-500 mt-3 hover:underline cursor-pointer">
                 Mot de passe oublié ?
-              </p>
+              </a>
             </div>
 
             <div className="flex justify-center">

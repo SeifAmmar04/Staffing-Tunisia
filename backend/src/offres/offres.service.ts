@@ -4,13 +4,12 @@ import { pool } from '../db';
 @Injectable()
 export class OffreService {
 
- async findAll() {
+  async findAll() {
     try {
-      const result = await pool.query(`SELECT * FROM "Offre" `);
-      console.log("ROWS:", result.rows); // ← ajoutez cette ligne
+      const result = await pool.query(`SELECT * FROM "Offre" ORDER BY "createdAt" DESC`);
       return result.rows;
     } catch (error) {
-      console.error("ERREUR FINDALL:", error); // ← et celle-ci
+      console.error("ERREUR FINDALL:", error);
       throw new HttpException("SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -19,17 +18,19 @@ export class OffreService {
     try {
       const result = await pool.query(
         `INSERT INTO "Offre"
-        ("titre","description","typeContrat","localisation","competencesRequises","salairePropose","datePublication","dateExpiration")
-        VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7)
+        ("title","description","requirements","location","salary_range","typeContrat","experience","dateExpiration","categorie","createdAt")
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
         RETURNING *`,
         [
-          data.titre,
+          data.title,
           data.description,
+          data.requirements,
+          data.location,
+          data.salary_range,
           data.typeContrat,
-          data.localisation,
-          data.competencesRequises,
-          data.salairePropose,
+          data.experience,
           data.dateExpiration,
+          data.categorie ?? 'autre', 
         ]
       );
       return result.rows[0];
@@ -59,18 +60,20 @@ export class OffreService {
     try {
       const result = await pool.query(
         `UPDATE "Offre"
-        SET titre=$1, description=$2, typeContrat=$3, localisation=$4,
-        competencesRequises=$5, salairePropose=$6, dateExpiration=$7
-        WHERE id=$8
+        SET "title"=$1, "description"=$2, "requirements"=$3, "location"=$4,
+        "salary_range"=$5, "typeContrat"=$6, "experience"=$7, "dateExpiration"=$8 ,"categorie"=$9 
+        WHERE id=$10
         RETURNING *`,
         [
-          data.titre,
+          data.title,
           data.description,
+          data.requirements,
+          data.location,
+          data.salary_range,
           data.typeContrat,
-          data.localisation,
-          data.competencesRequises,
-          data.salairePropose,
+          data.experience,
           data.dateExpiration,
+          data.categorie ?? 'autre',
           id,
         ]
       );
