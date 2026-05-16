@@ -4,9 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useLang } from "@/context/LangContext";
+import type { Lang } from "@/lib/i18n";
 
 export default function Navbar() {
-  const [lang, setLang] = useState("fr");
+  const { lang, setLang, t } = useLang();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"login" | "register">("login");
@@ -35,7 +37,7 @@ export default function Navbar() {
               pathname === "/" ? "text-red-600 font-semibold" : "hover:text-red-600"
             }`}
           >
-            Accueil
+            {t("home")}
           </Link>
 
           <Link
@@ -44,90 +46,82 @@ export default function Navbar() {
               pathname === "/about" ? "text-red-600 font-semibold" : "hover:text-red-600"
             }`}
           >
-            À propos
+            {t("about")}
           </Link>
 
           {/* SOLUTIONS RH dropdown */}
           <div className="relative group inline-block">
             <button className="flex items-center gap-1 uppercase text-gray-900 font-medium group-hover:text-red-500 transition-colors cursor-pointer outline-none">
-              Solutions RH
+              {t("solutionsRH")}
               <svg className="w-2 h-2 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            <div className="absolute top-full left-0 mt-3 w-69 bg-white rounded-2xl shadow-2xl p-8 border border-gray-100
+            <div className="absolute top-full left-0 mt-3 w-69 bg-white  shadow-2xl p-8 border border-gray-100
                 opacity-0 invisible scale-95
                 group-hover:opacity-100 group-hover:visible group-hover:scale-100
                 transition-all duration-200 ease-out z-50">
 
               <div className="mb-6">
-                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">GLOBAL</p>
+                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">{t("global")}</p>
                 <a href="/eor-services" className="block text-lg font-semibold text-slate-800 hover:text-red-600 transition-colors">
-                  Services EOR
+                  {t("eorServices")}
                 </a>
               </div>
 
               <div className="mb-6">
-                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">FINANCE</p>
+                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">{t("finance")}</p>
                 <a href="/Externalisation-Paie" className="block text-lg font-semibold text-slate-800 hover:text-red-600 transition-colors">
-                  Externalisation Paie
+                  {t("externalisationPaie")}
                 </a>
               </div>
 
-              <div className="mb-6">
-                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">TALENTS</p>
-                <a href="/recrutement" className="block text-lg font-semibold text-slate-800 hover:text-red-600 transition-colors">
-                  Recrutement (4 packs)
+              <div className="">
+                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">{t("talents")}</p>
+                <a href="/Recretement4pack" className="block text-lg font-semibold text-slate-800 hover:text-red-600 transition-colors">
+                  {t("recrutementPacks")}
                 </a>
               </div>
 
-              <div>
-                <p className="text-[10px] tracking-widest text-gray-400 font-bold mb-1">STRATEGY</p>
-                <a href="/conseil-rh" className="block text-lg font-semibold text-slate-800 hover:text-red-600 transition-colors">
-                  Conseil RH
-                </a>
-              </div>
+              
             </div>
           </div>
 
           {/* RECRUTEMENT dropdown */}
           <div className="relative group inline-block">
             <button className="flex items-center gap-1 uppercase text-gray-700 font-medium group-hover:text-red-500 transition-colors cursor-pointer outline-none">
-              Recrutement
+              {t("recrutement")}
                 <svg className="w-2 h-2 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            <div className="absolute top-full left-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl p-5 border border-gray-100
+            <div className="absolute top-full left-0 mt-3 w-56 bg-white  shadow-2xl p-5 border border-gray-100
                 opacity-0 invisible scale-95
                 group-hover:opacity-100 group-hover:visible group-hover:scale-100
                 transition-all duration-200 ease-out z-50">
 
               <div className="mb-4">
                 <a href="/Espace-entreprise" className="block text-base font-semibold text-slate-800 hover:text-red-600 transition-colors">
-                  Espace Entreprise
+                  {t("espaceEntreprise")}
                 </a>
               </div>
               <div>
                 <a href="/Espace-candidat" className="block text-base font-semibold text-slate-800 hover:text-red-600 transition-colors">
-                  Espace Candidat
+                  {t("espaceCandidat")}
                 </a>
               </div>
             </div>
           </div>
 
           <Link href="/offres-emploi" className="uppercase hover:text-red-600 transition">
-            Offres Emploi
+            {t("offresEmploi")}
           </Link>
 
-          <Link href="/Blog" className="uppercase hover:text-red-600 transition">
-            Blog
-          </Link>
 
           <Link href="/contact" className="uppercase hover:text-red-600 transition">
-            Contact
+            {t("contact")}
           </Link>
         </nav>
 
@@ -136,20 +130,19 @@ export default function Navbar() {
 
           <select
             value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className="border rounded-md px-1.5 py-1 text-sm"
+            onChange={(e) => setLang(e.target.value as Lang)}
+            className="border  px-1.5 py-1 text-sm"
           >
             <option value="fr">FR</option>
             <option value="en">EN</option>
-            <option value="ar">AR</option>
           </select>
 
           <a
             href="/auth/login"
-            className="flex items-center gap-2 border border-red-600 px-3 py-2 rounded-full text-red-600 font-bold text-sm uppercase tracking-widest hover:bg-red-50 transition-colors cursor-pointer"
+            className="flex items-center gap-2 border border-red-600 px-3 py-1.5  text-red-600 font-bold text-sm uppercase tracking-widest hover:bg-red-50 transition-colors cursor-pointer"
           >
-            <span className="text-red-600 font-bold text-base">→</span>
-            Login
+            <span className="text-red-600 font-bold text-base">&#8594;</span>
+            {t("login")}
           </a>
 
         </div>

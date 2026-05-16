@@ -28,6 +28,8 @@ type Candidature = {
   first_name: string; last_name: string; email: string;
   phone?: string; resume_path?: string; createdAt: string;
   job_title?: string; status?: string; message?: string;
+  score?: number;
+  score_resume?: string;
 };
 type Offre = {
   id: number; title: string; description: string;
@@ -77,6 +79,37 @@ function parseServices(s?: string[] | string): string[] {
 function buildCvUrl(resumePath?: string): string {
   if (!resumePath) return "";
   return `${API_URL}/${resumePath.replace(/\\/g, "/")}`;
+}
+
+// ─── Score Badge ──────────────────────────────────────────────────────────────
+function ScoreBadge({ score }: { score?: number }) {
+  if (score === undefined || score === null) {
+    return (
+      <span className="text-xs px-2.5 py-1 rounded-full  text-gray-400 font-semibold">
+        — Non scoré
+      </span>
+    );
+  }
+  if (score >= 9) return (
+    <span className="text-xs px-2.5 py-1 rounded-full text-black-700 font-bold">
+      🟢⭐{score}/10
+    </span>
+  );
+  if (score >= 7) return (
+    <span className="text-xs px-2.5 py-1 rounded-full  text-black-400 font-bold">
+      🟢{score}/10
+    </span>
+  );
+  if (score >= 4) return (
+    <span className="text-xs px-2.5 py-1 rounded-full  text-black-700 font-bold">
+      🟡 {score}/10
+    </span>
+  );
+  return (
+    <span className="text-xs px-2.5 py-1 rounded-full  text-black-700 font-bold">
+      🔴 {score}/10
+    </span>
+  );
 }
 
 // ─── Composants utilitaires ───────────────────────────────────────────────────
@@ -138,7 +171,7 @@ function Field({ label, value, onChange, type = "text", placeholder = "", as = "
   );
 }
 
-// ─── Carte candidature (réutilisable) ─────────────────────────────────────────
+// ─── Carte candidature ────────────────────────────────────────────────────────
 function CandidatureCard({
   c, onView, onDelete, onUpdateStatus,
 }: {
@@ -177,6 +210,13 @@ function CandidatureCard({
                   <p className="text-xs text-gray-600 italic line-clamp-2">"{c.message}"</p>
                 </div>
               )}
+              {/* Score IA */}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <ScoreBadge score={c.score} />
+                {c.score_resume && (
+                  <p className="text-xs text-gray-400 italic line-clamp-1">🤖 {c.score_resume}</p>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -194,7 +234,6 @@ function CandidatureCard({
           </div>
         </div>
 
-        {/* Boutons statut + CV */}
         <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-50 flex-wrap">
           <span className="text-xs text-gray-400 font-medium">Statut :</span>
           {[
@@ -241,7 +280,6 @@ export default function DashboardAdmin() {
   const [searchContacts, setSearchContacts] = useState("");
   const [filterStatus, setFilterStatus] = useState("ALL");
 
-  // ← State pour l'offre sélectionnée dans la vue candidatures
   const [selectedOffreId, setSelectedOffreId] = useState<number | null>(null);
 
   const [modalOffre, setModalOffre] = useState<Offre | null | "new">(null);
@@ -287,13 +325,27 @@ export default function DashboardAdmin() {
     router.push("/auth/login");
   };
 
-  const deleteCandidat = async (id: number) => {
-    if (!confirm("Supprimer ce candidat ?")) return;
-    await fetch(`${API_URL}/users/${id}`, { method: "DELETE" });
+const deleteCandidat = async (id: number) => {
+  if (!confirm("Supprimer ce candidat ?")) return;
+  
+  try {
+    const res = await fetch(`${API_URL}/users/${id}`, { method: "DELETE" });
+    
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(`Erreur : ${err.message || "Impossible de supprimer ce candidat"}`);
+      return;
+    }
+
     setCandidats(p => p.filter(c => c.id !== id));
-    setCandidatures(p => p.filter(c => c.applicant_id !== id));
+    setCandidatures(p => p.filter(c => String(c.applicant_id) !== String(id)));
     setModalCandidat(null);
-  };
+
+  } catch (error) {
+    alert("Erreur réseau, veuillez réessayer.");
+    console.error(error);
+  }
+};
 
   const updateStatus = async (id: number, status: string) => {
     await fetch(`${API_URL}/applications/${id}`, {
@@ -384,7 +436,6 @@ export default function DashboardAdmin() {
 
   // ─── Rendu section candidatures ───────────────────────────────────────────
   const renderCandidatures = () => {
-    // Grouper les candidatures par offre
     const grouped = offres
       .map(o => ({
         offre: o,
@@ -392,10 +443,8 @@ export default function DashboardAdmin() {
       }))
       .filter(g => g.items.length > 0);
 
-    // Candidatures orphelines (offre supprimée)
     const orphelines = candidatures.filter(c => !offres.find(o => o.id === c.job_id));
 
-    // ── Vue détail d'une offre sélectionnée ──
     if (selectedOffreId !== null) {
       const isOrphan = selectedOffreId === -1;
       const group = grouped.find(g => g.offre.id === selectedOffreId);
@@ -410,8 +459,11 @@ export default function DashboardAdmin() {
         return txt && st;
       });
 
-      // Trier : PENDING en premier
+      // Tri par score décroissant, puis PENDING en premier
       const sorted = [...filtered].sort((a, b) => {
+        const scoreA = a.score ?? -1;
+        const scoreB = b.score ?? -1;
+        if (scoreB !== scoreA) return scoreB - scoreA;
         const aP = !a.status || a.status === "PENDING" ? 0 : 1;
         const bP = !b.status || b.status === "PENDING" ? 0 : 1;
         return aP - bP;
@@ -419,7 +471,6 @@ export default function DashboardAdmin() {
 
       return (
         <div className="space-y-6 animate-fadein">
-          {/* Header avec bouton retour */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
@@ -440,7 +491,6 @@ export default function DashboardAdmin() {
             </span>
           </div>
 
-          {/* Barre recherche + filtre */}
           <div className="flex flex-wrap gap-3">
             <div className="relative flex-1 min-w-48">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs" />
@@ -479,7 +529,6 @@ export default function DashboardAdmin() {
       );
     }
 
-    // ── Vue principale : liste des offres groupées ──
     return (
       <div className="space-y-6 animate-fadein">
         <div>
@@ -509,7 +558,6 @@ export default function DashboardAdmin() {
                   className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-[#9b0000]/20 transition text-left group">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      {/* Icône catégorie */}
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: catColor + "18" }}>
                         <CatIcon size={20} style={{ color: catColor }} />
@@ -530,7 +578,6 @@ export default function DashboardAdmin() {
                     </div>
 
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      {/* Mini stats statuts */}
                       <div className="hidden md:flex items-center gap-1.5">
                         {pendingCount > 0 && (
                           <span className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-100 px-2 py-0.5 rounded-full font-semibold">
@@ -548,7 +595,6 @@ export default function DashboardAdmin() {
                           </span>
                         )}
                       </div>
-                      {/* Total + flèche */}
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-gray-900">{items.length}</span>
                         <span className="text-xs text-gray-400">candidature{items.length > 1 ? "s" : ""}</span>
@@ -560,7 +606,6 @@ export default function DashboardAdmin() {
               );
             })}
 
-            {/* Candidatures orphelines */}
             {orphelines.length > 0 && (
               <button onClick={() => setSelectedOffreId(-1)}
                 className="w-full bg-white rounded-2xl shadow-sm border border-dashed border-gray-200 p-5 hover:shadow-md transition text-left group">
@@ -591,7 +636,6 @@ export default function DashboardAdmin() {
   const renderContent = () => {
     switch (activeSection) {
 
-      // ── DASHBOARD ──────────────────────────────────────────────────────────
       case "dashboard": return (
         <div className="space-y-8 animate-fadein">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -650,6 +694,7 @@ export default function DashboardAdmin() {
                       <p className="text-xs text-gray-400">{c.job_title || "Offre #" + c.job_id}</p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <ScoreBadge score={c.score} />
                       <StatusBadge status={c.status} />
                       <button onClick={() => setModalCandidature(c)}
                         className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:bg-gray-100 hover:text-gray-600 transition text-xs">
@@ -690,7 +735,6 @@ export default function DashboardAdmin() {
         </div>
       );
 
-      // ── CANDIDATS ──────────────────────────────────────────────────────────
       case "candidats": return (
         <div className="space-y-6 animate-fadein">
           <div>
@@ -768,10 +812,8 @@ export default function DashboardAdmin() {
         </div>
       );
 
-      // ── CANDIDATURES ───────────────────────────────────────────────────────
       case "candidatures": return renderCandidatures();
 
-      // ── OFFRES ─────────────────────────────────────────────────────────────
       case "offres": return (
         <div className="space-y-6 animate-fadein">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -853,7 +895,6 @@ export default function DashboardAdmin() {
         </div>
       );
 
-      // ── CONTACTS ───────────────────────────────────────────────────────────
       case "contacts": return (
         <div className="space-y-6 animate-fadein">
           <div>
@@ -931,8 +972,6 @@ export default function DashboardAdmin() {
       `}</style>
 
       <div className="min-h-screen bg-[#f5f5f0] flex font-sans">
-
-        {/* ── Sidebar ── */}
         <aside className="w-64 bg-white border-r border-gray-100 flex flex-col justify-between py-8 px-4 sticky top-0 h-screen overflow-y-auto">
           <div className="space-y-1">
             <div className="flex justify-center mb-8 px-2">
@@ -967,7 +1006,6 @@ export default function DashboardAdmin() {
           </button>
         </aside>
 
-        {/* ── Main ── */}
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="max-w-5xl mx-auto">{renderContent()}</div>
         </main>
@@ -990,6 +1028,23 @@ export default function DashboardAdmin() {
             <InfoRow icon={<FaPhone />}        label="Téléphone" value={modalCandidature.phone || "—"} />
             <InfoRow icon={<FaBriefcase />}    label="Poste"     value={modalCandidature.job_title || "Offre #" + modalCandidature.job_id} />
             <InfoRow icon={<FaCalendarAlt />}  label="Date"      value={new Date(modalCandidature.createdAt).toLocaleDateString("fr-FR")} />
+
+            {/* Score IA */}
+            {modalCandidature.score !== undefined && modalCandidature.score !== null && (
+              <div className="p-3  rounded-xl border border-purple-100">
+                <p className="text-xs text-purple-400 mb-2 font-medium flex items-center gap-1">
+                  🤖 Score IA
+                </p>
+                <div className="flex items-center gap-3">
+                  <ScoreBadge score={modalCandidature.score} />
+                  {modalCandidature.score_resume && (
+                    <p className="text-xs text-gray-600 italic flex-1">
+                      {modalCandidature.score_resume}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {modalCandidature.message && (
               <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
@@ -1069,7 +1124,10 @@ export default function DashboardAdmin() {
                           <StatusBadge status={c.status} />
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString("fr-FR")}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleDateString("fr-FR")}</p>
+                            <ScoreBadge score={c.score} />
+                          </div>
                           {c.resume_path && (
                             <a href={buildCvUrl(c.resume_path)} target="_blank" rel="noreferrer"
                               className="flex items-center gap-1 text-xs text-[#9b0000] font-medium hover:underline">

@@ -1,9 +1,25 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { pool } from '../db';
 import * as bcrypt from 'bcrypt';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class UsersService {
+
+  // ── Propriétés ────────────────────────────────────────────────────────────
+
+  private otpStore = new Map<string, { code: string; expiry: number }>();
+
+private transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,  // ← MAIL_USER → GMAIL_USER
+    pass: process.env.GMAIL_PASS,  // ← MAIL_PASS → GMAIL_PASS
+  },
+});
+
+  // ── READ ──────────────────────────────────────────────────────────────────
+
   async findAllCandidates() {
     const result = await pool.query(
       `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
@@ -14,34 +30,108 @@ export class UsersService {
     return result.rows;
   }
 
-  // ✅ CORRIGÉ : Retourner le phone correctement (pas NULL)
   async findById(id: number) {
-    // ✅ APRÈS (corrigé)
-const result = await pool.query(
-  `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
-   FROM "User" WHERE id = $1`,
-  [id]
-);
-    
+    const result = await pool.query(
+      `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
+       FROM "User" WHERE id = $1`,
+      [id]
+    );
+
     if (!result.rows[0]) {
       throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
     }
 
     const user = result.rows[0];
-    
-    // ✅ Nettoyer les données : pas de NULL, pas de strings vides
-    // ✅ APRÈS
-return {
-  ...user,
-  phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
-  firstName: user.firstName || "",
-  lastName: user.lastName || "",
-  email: user.email || "",
-  // ← plus de resume_path / resume_name
-};
+
+    return {
+      ...user,
+      phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      email: user.email || "",
+    };
   }
 
-  // ✅ CORRIGÉ : Compléter le RETURNING et ajouter les colonnes manquantes
+  async findByEmail(email: string) {
+    const result = await pool.query(
+      `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
+       FROM "User" WHERE email = $1`,
+      [email]
+    );
+
+    if (!result.rows[0]) {
+      throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
+    }
+
+    const user = result.rows[0];
+
+    return {
+      ...user,
+      phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+    };
+  }
+
+  async checkEmail(email: string) {
+    const result = await pool.query(
+      `SELECT id FROM "User" WHERE email = $1`,
+      [email]
+    );
+    return { exists: result.rows.length > 0 };
+  }
+
+  // ── WRITE ─────────────────────────────────────────────────────────────────
+
+  async create(data: {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    email: string;
+    password: string;
+  }) {
+    try {
+      const existingUser = await pool.query(
+        `SELECT id FROM "User" WHERE email = $1`,
+        [data.email]
+      );
+
+      if (existingUser.rows.length > 0) {
+        throw new HttpException({ message: 'EMAIL_EXISTS' }, HttpStatus.BAD_REQUEST);
+      }
+
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+
+      const result = await pool.query(
+        `INSERT INTO "User" ("firstName", "lastName", phone, email, password, role, "createdAt")
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+         RETURNING id, "firstName", "lastName", email, phone, role, "createdAt"`,
+        [
+          data.firstName,
+          data.lastName,
+          data.phone || "",
+          data.email,
+          hashedPassword,
+          'CANDIDATE',
+        ]
+      );
+
+      const user = result.rows[0];
+
+      return {
+        ...user,
+        phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
+      };
+
+    } catch (error: any) {
+      if (error instanceof HttpException) throw error;
+
+      if (error.code === '23505') {
+        throw new HttpException({ message: 'EMAIL_EXISTS' }, HttpStatus.BAD_REQUEST);
+      }
+
+      throw new HttpException({ message: 'SERVER_ERROR' }, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   async update(id: number, data: {
     firstName?: string;
     lastName?: string;
@@ -52,6 +142,7 @@ return {
       `SELECT id FROM "User" WHERE id = $1`,
       [id]
     );
+
     if (existing.rows.length === 0) {
       throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
     }
@@ -66,10 +157,9 @@ return {
       }
     }
 
-    // ✅ CORRIGÉ : Compléter le RETURNING avec toutes les colonnes
     const result = await pool.query(
       `UPDATE "User"
-       SET 
+       SET
          "firstName" = COALESCE($1, "firstName"),
          "lastName"  = COALESCE($2, "lastName"),
          email       = COALESCE($3, email),
@@ -90,8 +180,7 @@ return {
     }
 
     const user = result.rows[0];
-    
-    // ✅ Nettoyer les données de réponse
+
     return {
       ...user,
       phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
@@ -103,6 +192,7 @@ return {
       `SELECT password FROM "User" WHERE id = $1`,
       [id]
     );
+
     if (result.rows.length === 0) {
       throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
     }
@@ -113,7 +203,10 @@ return {
     }
 
     if (newPassword.length < 6) {
-      throw new HttpException('Le nouveau mot de passe doit contenir au moins 6 caractères', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Le nouveau mot de passe doit contenir au moins 6 caractères',
+        HttpStatus.BAD_REQUEST
+      );
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
@@ -126,94 +219,75 @@ return {
   }
 
   async delete(id: number) {
-    await pool.query(`DELETE FROM "User" WHERE id = $1`, [id]);
-    return { message: 'Candidat supprimé' };
-  }
-
-  async checkEmail(email: string) {
-    const result = await pool.query(
-      `SELECT * FROM "User" WHERE email = $1`,
-      [email]
+    const existing = await pool.query(
+      `SELECT id FROM "User" WHERE id = $1`,
+      [id]
     );
-    return { exists: result.rows.length > 0 };
-  }
 
-  // ✅ NOUVEAU : findByEmail pour la connexion Google/OAuth
-  async findByEmail(email: string) {
-    const result = await pool.query(
-      `SELECT id, "firstName", "lastName", email, phone, role, "createdAt"
-       FROM "User" WHERE email = $1`,
-      [email]
-    );
-    
-    if (!result.rows[0]) {
+    if (existing.rows.length === 0) {
       throw new HttpException('Utilisateur non trouvé', HttpStatus.NOT_FOUND);
     }
 
-    const user = result.rows[0];
-    
-    // ✅ Nettoyer les données
-    return {
-      ...user,
-      phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
-    };
+    try {
+      await pool.query(`DELETE FROM "User" WHERE id = $1`, [id]);
+      return { message: 'Candidat supprimé avec succès' };
+    } catch (error: any) {
+      if (error.code === '23503') {
+        throw new HttpException(
+          'Impossible de supprimer : données liées existantes',
+          HttpStatus.CONFLICT
+        );
+      }
+      throw new HttpException('Erreur lors de la suppression', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  async create(data: any) {
-    try {
-      const existingUser = await pool.query(
-        `SELECT * FROM "User" WHERE email = $1`,
-        [data.email]
-      );
+  // ── OTP ───────────────────────────────────────────────────────────────────
 
-      if (existingUser.rows.length > 0) {
-        throw new HttpException(
-          { message: "EMAIL_EXISTS" },
-          HttpStatus.BAD_REQUEST
-        );
-      }
+  async sendOtp(email: string) {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 10 * 60 * 1000;
 
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+    this.otpStore.set(email, { code, expiry });
 
-      const result = await pool.query(
-        `INSERT INTO "User"
-        ("firstName","lastName","phone","email","password","role","createdAt")
-        VALUES ($1,$2,$3,$4,$5,$6,NOW())
-        RETURNING id, "firstName", "lastName", email, phone, role, "createdAt"`,
-        [
-          data.firstName,
-          data.lastName,
-          data.phone || "",  // ✅ S'assurer que phone n'est pas NULL
-          data.email,
-          hashedPassword,
-          'CANDIDATE',
-        ]
-      );
+    await this.transporter.sendMail({
+      from: `"Staffing Tunisia" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: '🔐 Code de vérification - Staffing Tunisia',
+      html: `
+        <div style="font-family: Arial; padding: 20px; max-width: 500px;">
+          <h2 style="color: #dc2626;">Staffing Tunisia</h2>
+          <p>Votre code de vérification est :</p>
+          <div style="font-size: 36px; font-weight: bold; color: #dc2626;
+                      letter-spacing: 8px; padding: 20px; background: #f9f9f9;
+                      border-radius: 8px; text-align: center;">
+            ${code}
+          </div>
+          <p style="color: #888; margin-top: 16px;">Ce code expire dans <b>10 minutes</b>.</p>
+        </div>
+      `,
+    });
 
-      const user = result.rows[0];
-      
-      // ✅ Nettoyer les données de réponse
-      return {
-        ...user,
-        phone: user.phone && String(user.phone).trim() ? String(user.phone).trim() : "",
-      };
+    return { message: 'OTP envoyé' };
+  }
 
-    } catch (error: any) {
-      console.error("DB ERROR:", error);
+  async verifyOtp(email: string, code: string) {
+    const stored = this.otpStore.get(email);
 
-      if (error instanceof HttpException) throw error;
-
-      if (error.code === '23505') {
-        throw new HttpException(
-          { message: "EMAIL_EXISTS" },
-          HttpStatus.BAD_REQUEST
-        );
-      }
-
-      throw new HttpException(
-        { message: "SERVER_ERROR" },
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+    if (!stored) {
+      throw new HttpException('Code introuvable ou expiré', HttpStatus.BAD_REQUEST);
     }
+
+    if (Date.now() > stored.expiry) {
+      this.otpStore.delete(email);
+      throw new HttpException('Code expiré', HttpStatus.BAD_REQUEST);
+    }
+
+    if (stored.code !== code) {
+      throw new HttpException('Code invalide', HttpStatus.BAD_REQUEST);
+    }
+
+    this.otpStore.delete(email);
+    return { verified: true };
   }
 }

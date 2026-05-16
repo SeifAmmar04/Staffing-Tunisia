@@ -22,7 +22,15 @@ export class UsersController {
   async checkEmail(@Body() body: { email: string }) {
     return await this.usersService.checkEmail(body.email);
   }
-
+@Post('send-otp')
+async sendOtp(@Body() body: { email: string }) {
+  return this.usersService.sendOtp(body.email);
+}
+ 
+@Post('verify-otp')
+async verifyOtp(@Body() body: { email: string; code: string }) {
+  return this.usersService.verifyOtp(body.email, body.code);
+}
   // ✅ GET par email (Google OAuth)
   @Get('by-email/:email')
   async findByEmail(@Param('email') email: string) {
@@ -40,6 +48,7 @@ export class UsersController {
   async updateUser(@Param('id') id: string, @Body() data: any) {
     return await this.usersService.update(parseInt(id), data);
   }
+  
 
   // ✅ PATCH changer mot de passe
   @Patch(':id/password')

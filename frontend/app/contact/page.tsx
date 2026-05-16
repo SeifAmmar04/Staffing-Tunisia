@@ -4,8 +4,11 @@ import { useState } from "react";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/navbar";
 import { motion } from "framer-motion";
+import { useLang } from "@/context/LangContext";
 
 export default function ContactPage() {
+  const { t } = useLang();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -19,10 +22,10 @@ export default function ContactPage() {
   const [success, setSuccess] = useState(false);
 
   const servicesList = [
-    "Services EOR",
-    "Gestion Paie",
-    "Recrutement",
-    "Conseil RH",
+    t("contactService1"),
+    t("contactService2"),
+    t("contactService3"),
+    t("contactService4"),
   ];
 
   const handleChange = (
@@ -40,12 +43,11 @@ export default function ContactPage() {
     }));
   };
 
-  // ✅ handleSubmit corrigé
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!form.name || !form.email || !form.message) {
-      alert("Veuillez remplir les champs obligatoires");
+      alert(t("contactAlert"));
       return;
     }
 
@@ -69,11 +71,11 @@ export default function ContactPage() {
           message: "",
         });
       } else {
-        alert("Erreur lors de l'envoi ❌");
+        alert(t("contactErreur"));
       }
     } catch (err) {
       console.error(err);
-      alert("Erreur réseau ❌");
+      alert(t("contactErreurReseau"));
     } finally {
       setLoading(false);
     }
@@ -95,16 +97,15 @@ export default function ContactPage() {
             <div>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-[2px] bg-blue-600"></div>
-                <span className="text-blue-600 font-semibold">Contactez-nous</span>
+                <span className="text-blue-600 font-semibold">{t("contactLabel")}</span>
               </div>
 
               <h2 className="text-5xl font-bold leading-tight mb-6">
-                Parlons de votre projet
+                {t("contactTitle")}
               </h2>
 
               <p className="text-lg text-gray-600 leading-relaxed max-w-xl">
-                Notre équipe d'experts est à votre écoute pour étudier votre besoin
-                et vous proposer la solution RH la plus adaptée à votre contexte.
+                {t("contactDesc")}
               </p>
             </div>
 
@@ -112,7 +113,7 @@ export default function ContactPage() {
               <div className="flex items-start gap-4">
                 <div className="text-blue-600 text-3xl">📞</div>
                 <div>
-                  <p className="text-gray-500">Téléphone</p>
+                  <p className="text-gray-500">{t("contactPhone")}</p>
                   <p className="font-semibold text-lg">(00216) 31 360 300</p>
                 </div>
               </div>
@@ -120,7 +121,7 @@ export default function ContactPage() {
               <div className="flex items-start gap-4">
                 <div className="text-blue-600 text-3xl">✉️</div>
                 <div>
-                  <p className="text-gray-500">E-mail</p>
+                  <p className="text-gray-500">{t("contactEmail")}</p>
                   <p className="font-semibold text-lg">contact@staffing-tunisia.com</p>
                 </div>
               </div>
@@ -128,9 +129,9 @@ export default function ContactPage() {
               <div className="flex items-start gap-4">
                 <div className="text-blue-600 text-3xl">📍</div>
                 <div>
-                  <p className="text-gray-500">Siège</p>
+                  <p className="text-gray-500">{t("contactSiege")}</p>
                   <p className="font-semibold text-lg">
-                    Avenue Majida Boulila, Immeuble Mirage 3, Sfax
+                    {t("contactSiegeAddr")}
                   </p>
                 </div>
               </div>
@@ -140,17 +141,17 @@ export default function ContactPage() {
           {/* DROITE - FORMULAIRE */}
           <motion.form
             onSubmit={handleSubmit}
-            className="bg-white p-8 rounded-2xl shadow-lg space-y-5"
+            className="bg-white p-8  shadow-lg space-y-5"
             initial={{ opacity: 0, x: 60 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
           >
-            <h3 className="text-xl font-semibold mb-4">Informations personnelles</h3>
+            <h3 className="text-xl font-semibold mb-4">{t("formTitle")}</h3>
 
             <input
               type="text"
               name="company"
-              placeholder="Société"
+              placeholder={t("formCompany")}
               value={form.company}
               onChange={handleChange}
               className="w-full p-3 border rounded-xl"
@@ -159,7 +160,7 @@ export default function ContactPage() {
             <input
               type="text"
               name="name"
-              placeholder="Nom complet *"
+              placeholder={t("formName")}
               value={form.name}
               onChange={handleChange}
               className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-500"
@@ -168,7 +169,7 @@ export default function ContactPage() {
             <input
               type="email"
               name="email"
-              placeholder="Email professionnel *"
+              placeholder={t("formEmail")}
               value={form.email}
               onChange={handleChange}
               className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-red-500"
@@ -177,14 +178,14 @@ export default function ContactPage() {
             <input
               type="text"
               name="phone"
-              placeholder="Téléphone"
+              placeholder={t("formPhone")}
               value={form.phone}
               onChange={handleChange}
               className="w-full p-3 border rounded-xl"
             />
 
             <div>
-              <p className="font-semibold mb-3">Service concerné :</p>
+              <p className="font-semibold mb-3">{t("contactServiceLabel")}</p>
               <div className="grid grid-cols-2 gap-3">
                 {servicesList.map((service) => (
                   <div
@@ -204,7 +205,7 @@ export default function ContactPage() {
 
             <textarea
               name="message"
-              placeholder="Votre message *"
+              placeholder={t("formMessage")}
               rows={4}
               value={form.message}
               onChange={handleChange}
@@ -215,12 +216,12 @@ export default function ContactPage() {
               type="submit"
               className="w-full bg-red-600 text-white py-3 rounded-xl font-semibold hover:bg-red-700 transition"
             >
-              {loading ? "Envoi..." : "Envoyer la demande"}
+              {loading ? t("formSending") : t("formSubmit")}
             </button>
 
             {success && (
               <p className="text-green-600 text-sm text-center">
-                ✅ Votre message a été envoyé avec succès !
+                {t("formSuccess")}
               </p>
             )}
           </motion.form>

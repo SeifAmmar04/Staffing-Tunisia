@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useLang } from "@/context/LangContext";
 
 const logos = [
   "/logo1.png", "/logo2.png", "/logo3.png", "/logo4.png",
@@ -38,12 +39,13 @@ const temoignages = [
 ];
 
 export default function Clients() {
+  const { t } = useLang();
   const [index, setIndex] = useState(0);
 
   const prev = () => setIndex((i) => (i === 0 ? temoignages.length - 1 : i - 1));
   const next = () => setIndex((i) => (i === temoignages.length - 1 ? 0 : i + 1));
 
-  const t = temoignages[index];
+  const temoignage = temoignages[index];
 
   return (
     <>
@@ -54,14 +56,14 @@ export default function Clients() {
           <div className="flex items-center gap-3 mb-5">
             <span className="w-8 h-[2px] bg-red-500"></span>
             <p className="text-red-500 uppercase tracking-[0.2em] text-lg font-semibold">
-              Confiance
+              {t("clientsConfiance")}
             </p>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Des entreprises nous font confiance
+            {t("clientsTitle")}
           </h2>
           <p className="text-gray-600 text-base md:text-lg max-w-2xl">
-            Nous aidons nos clients à trouver les bons talents et à développer leur activité en toute simplicité.
+            {t("clientsDesc")}
           </p>
         </div>
 
@@ -94,7 +96,7 @@ export default function Clients() {
         <div className="flex items-center gap-3 mb-12">
           <span className="w-8 h-[2px] bg-red-500"></span>
           <p className="text-red-500 uppercase tracking-[0.2em] text-lg font-semibold">
-            Ils parlent de nous
+            {t("clientsTemoignagesLabel")}
           </p>
         </div>
 
@@ -102,15 +104,15 @@ export default function Clients() {
         <div className="relative max-w-5xl mx-auto">
 
           {/* Bordure dégradée bleu → rose */}
-          <div className="p-[2px] rounded-2xl bg-gradient-to-br from-[#020617] via-[#020617] to-[#0a1a2f]">
-            <div className="bg-white rounded-2xl px-10 py-10">
+          <div className="p-[2px]  bg-gradient-to-br from-[#020617] via-[#020617] to-[#0a1a2f]">
+            <div className="bg-white  px-10 py-10">
 
               {/* ÉTOILES */}
               <div className="flex gap-1 mb-6">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <svg
                     key={i}
-                    className={`w-6 h-6 ${i < t.etoiles ? "text-yellow-400" : "text-gray-200"}`}
+                    className={`w-6 h-6 ${i < temoignage.etoiles ? "text-yellow-400" : "text-gray-200"}`}
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -121,7 +123,7 @@ export default function Clients() {
 
               {/* TEXTE */}
               <p className="text-gray-600 text-base leading-relaxed mb-10 max-w-3xl">
-                {t.texte}
+                {temoignage.texte}
               </p>
 
               {/* BAS : PHOTO + NOM + BOUTONS */}
@@ -129,20 +131,18 @@ export default function Clients() {
 
                 <div className="flex items-center gap-6">
                   {/* Photo avec bordure dégradée */}
-                 <div className="p-[2px] rounded-full bg-gradient-to-br from-blue-300 to-pink-300">
-  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-    
-    <span className="text-gray-700 font-bold text-sm">
-      {t.nom?.slice(0, 2).toUpperCase()}
-    </span>
-
-  </div>
-</div>
+                  <div className="p-[2px] rounded-full bg-gradient-to-br from-blue-300 to-pink-300">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-700 font-bold text-sm">
+                        {temoignage.nom?.slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Nom + poste */}
-                  <div className="border border-gray-200 rounded-2xl px-6 py-3">
-                    <p className="font-bold text-gray-900 text-base">{t.nom}</p>
-                    <p className="text-gray-400 text-sm">{t.poste}</p>
+                  <div className="border border-gray-200  px-6 py-3">
+                    <p className="font-bold text-gray-900 text-base">{temoignage.nom}</p>
+                    <p className="text-gray-400 text-sm">{temoignage.poste}</p>
                   </div>
                 </div>
 

@@ -126,20 +126,20 @@ export default function CareersPage() {
         <div className="max-w-7xl mx-auto px-6">
 
           {/* ── Barre de recherche ── */}
-          <div className="bg-white p-6 rounded-2xl shadow-md mb-10 -mt-8 relative z-10">
+          <div className="bg-white p-6 shadow-md mb-10 -mt-8 relative z-10">
             <div className="grid md:grid-cols-5 gap-4">
               <input
                 type="text"
                 placeholder="Rechercher un poste..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="p-3 border rounded-xl outline-none focus:ring-2 focus:ring-red-300"
+                className="p-3 border  outline-none focus:ring-2 focus:ring-red-300"
               />
-              <select value={type} onChange={(e) => setType(e.target.value)} className="p-3 border rounded-xl outline-none">
+              <select value={type} onChange={(e) => setType(e.target.value)} className="p-3 border  outline-none">
                 <option value="">Type de contrat</option>
                 {types.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-              <select value={location} onChange={(e) => setLocation(e.target.value)} className="p-3 border rounded-xl outline-none">
+              <select value={location} onChange={(e) => setLocation(e.target.value)} className="p-3 border  outline-none">
                 <option value="">Localisation</option>
                 {locations.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
@@ -147,14 +147,14 @@ export default function CareersPage() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="p-3 border rounded-xl outline-none"
+                className="p-3 border  outline-none"
               />
               <div className="flex gap-2">
-                <button onClick={handleSearch} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
+                <button onClick={handleSearch} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3  transition">
                   🔍 Rechercher
                 </button>
                 {searched && (
-                  <button onClick={handleReset} className="px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-xl transition">
+                  <button onClick={handleReset} className="px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3  transition">
                     ✕
                   </button>
                 )}
@@ -182,7 +182,7 @@ export default function CareersPage() {
                 return (
                   <div
                     key={offre.id}
-                    className="bg-white p-6 rounded-3xl shadow hover:shadow-lg transition flex flex-col justify-between border border-gray-200 h-full"
+                    className="bg-white p-6  shadow hover:shadow-lg transition flex flex-col justify-between border border-gray-200 h-full"
                   >
 
 {/* ══ EN-TÊTE ══ */}
@@ -243,7 +243,7 @@ export default function CareersPage() {
                     {/* ══ BOUTON ══ */}
                     <button
                       onClick={() => handlePostuler(offre)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition mt-2"
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3  transition mt-2"
                     >
                       Postuler
                     </button>

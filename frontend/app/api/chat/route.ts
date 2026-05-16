@@ -13,7 +13,11 @@ Règles :
 - Réponds TOUJOURS en français
 - Réponses courtes : 2-3 phrases max
 - Si question très spécifique, invite à consulter la page Offres ou Contact
-- Ne jamais inventer des offres ou des tarifs précis`;
+- Ne jamais inventer des offres ou des tarifs précis
+- Si la question est TOTALEMENT hors sujet (animaux, cuisine, maths, 
+  géographie, blagues, poèmes, code informatique non lié au recrutement...),
+  réponds UNIQUEMENT : "Je suis uniquement formé pour répondre aux questions 
+  liées à Staffing Tunisia et au recrutement."`;
 
 const requestCounts = new Map<string, { count: number; reset: number }>();
 
@@ -22,7 +26,7 @@ export async function POST(req: NextRequest) {
   const now = Date.now();
   const limit = requestCounts.get(ip);
 
-  if (limit && now < limit.reset && limit.count >= 20) {
+  if (limit && now < limit.reset && limit.count >= 100) {
     return NextResponse.json(
       { reply: "Trop de messages envoyés. Attendez 1 minute." },
       { status: 429 }
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+       Authorization: "Bearer " + apiKey,
       },
       body: JSON.stringify({
         model: "llama-3.1-8b-instant",

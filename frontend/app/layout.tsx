@@ -1,5 +1,6 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
+import { LangProvider } from "@/context/LangContext";
 import './globals.css';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         <SessionProvider>
-          {children}
+          <LangProvider>
+            {children}
+          </LangProvider>
         </SessionProvider>
       </body>
     </html>
