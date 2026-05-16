@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token"); // le token vient du lien Gmail
@@ -192,5 +192,11 @@ export default function ResetPasswordPage() {
         © 2026 Staffing Tunisia. Tous droits réservés.
       </div>
     </div>
+  );
+}export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
