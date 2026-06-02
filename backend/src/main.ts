@@ -22,7 +22,7 @@ async function bootstrap() {
     prefix: '/uploads',
   });
 
-  await app.listen(5000);
-  console.log("🚀 Server running on http://localhost:5000");
+  await app.listen(process.env.PORT);
+  console.log("🚀 Server running on process.env.PORT ");
 }
 bootstrap();
