@@ -3,7 +3,6 @@ import { pool } from '../db';
 
 @Injectable()
 export class CandidaturesService {
-
   async create(
     job_id: number,
     applicant_id: number | null,
@@ -14,7 +13,6 @@ export class CandidaturesService {
     resume_path: string,
     message: string,
   ) {
-    // 1. INSERT candidature
     const result = await pool.query(
       `INSERT INTO "Application" (job_id, applicant_id, first_name, last_name, email, phone, resume_path, message)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -23,14 +21,15 @@ export class CandidaturesService {
     );
     const application = result.rows[0];
 
-    // 2. Récupérer l'offre
     const offreResult = await pool.query(
       `SELECT title, description, requirements FROM "Offre" WHERE id = $1`,
       [job_id]
     );
     const offre = offreResult.rows[0];
 
-    // 3. Appeler ia-service en arrière-plan (sans bloquer la réponse)
+    console.log('🔍 offre:', offre);
+    console.log('🔍 resume_path:', resume_path);
+
     if (offre && resume_path) {
       this.callIaService({
         application_id: application.id,
@@ -39,12 +38,13 @@ export class CandidaturesService {
         offre_description: offre.description || '',
         offre_requirements: offre.requirements || ''
       });
+    } else {
+      console.warn('⚠️ callIaService ignoré — offre ou resume_path manquant');
     }
 
     return application;
   }
 
-  // ✅ Appel IA sans await → ne bloque pas la réponse au candidat
   private async callIaService(data: {
     application_id: number;
     resume_path: string;
@@ -52,13 +52,15 @@ export class CandidaturesService {
     offre_description: string;
     offre_requirements: string;
   }) {
+    console.log('📡 IA_SERVICE_URL:', process.env.IA_SERVICE_URL);
+    console.log('📡 Data envoyée:', JSON.stringify(data));
     try {
       const response = await fetch(`${process.env.IA_SERVICE_URL}/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-
+      console.log('📡 IA Response status:', response.status);
       if (!response.ok) {
         console.error('❌ IA Service error:', await response.text());
       } else {
@@ -70,7 +72,6 @@ export class CandidaturesService {
     }
   }
 
-  // ← TRI : PENDING en premier, puis par date
   async findAll() {
     const result = await pool.query(
       `SELECT a.*, o.title as job_title
@@ -91,7 +92,6 @@ export class CandidaturesService {
     return result.rows[0];
   }
 
-  // ← ERREUR HTTP si non trouvé
   async updateStatus(id: number, status: string) {
     const validStatuses = ['PENDING', 'ACCEPTED', 'REJECTED'];
     if (!validStatuses.includes(status)) {
