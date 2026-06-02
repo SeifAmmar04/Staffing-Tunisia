@@ -48,125 +48,67 @@ class ScoreRequest(BaseModel):
 
 @app.post("/score")
 def score_application(req: ScoreRequest):
-    """
-    Flow complet :
-      CV (fichier) → texte → Groq (extraction) → Matching Engine (score) → DB
-    """
+    import urllib.request
+    import tempfile
 
-    # ── Étape 1 : résoudre le chemin du CV ──
-    uploads_path = os.getenv("UPLOADS_PATH", "../backend")
-    resume_clean = req.resume_path.replace("\\", "/").lstrip("/")
-    full_path    = os.path.normpath(os.path.join(uploads_path, resume_clean))
+    # ── Étape 1 : télécharger le CV depuis Cloudinary ──
+    try:
+        with urllib.request.urlopen(req.resume_path) as response:
+            cv_bytes = response.read()
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Impossible de télécharger le CV : {str(e)}")
 
-    if not os.path.exists(full_path):
-        raise HTTPException(status_code=404, detail=f"Fichier introuvable : {full_path}")
+    # ── Étape 2 : sauvegarder temporairement ──
+    suffix = ".pdf" if "pdf" in req.resume_path.lower() else ".docx"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(cv_bytes)
+        tmp_path = tmp.name
 
-    # ── Étape 2 : extraction texte brut ──
-    raw_text = extract_text(full_path)
+    # ── Étape 3 : extraction texte ──
+    raw_text = extract_text(tmp_path)
     cv_text  = clean_text(raw_text)
 
     if not cv_text:
         raise HTTPException(status_code=400, detail="CV vide ou illisible")
 
-    # ── Étape 3 : Groq → données structurées ──
-    structured = extract_structured_data(
-        cv_text          = cv_text,
-        offre_title      = req.offre_title,
-        offre_description= req.offre_description,
-        offre_requirements=req.offre_requirements
-    )
-    print("🔥 GROQ OUTPUT:", structured) 
-    # Vérification : est-ce un vrai CV ?
-    if structured.get("is_cv") is False:
-        result = {
-            "score":    0.0,
-            "score_100": 0.0,
-            "resume":  "Document invalide : ce fichier n'est pas un CV.",
-            "breakdown": {"skills": 0, "experience": 0, "semantic": 0, "projects": 0},
-            "explanation": "Le document fourni n'est pas un CV.",
-        }
-        _save_to_db(req.application_id, result["score"], result["resume"])
-        return {"application_id": req.application_id, **result}
-
-    # Erreur Groq → score 0 avec message
-    if structured.get("is_cv") is None:
-        raise HTTPException(status_code=502, detail=f"Erreur extraction Groq : {structured.get('error')}")
-
-    # ── Étape 4 : NOTRE algorithme de scoring ──
-    cv_data  = structured.get("cv",  {})
-    job_data = structured.get("job", {})
-    result   = calculate_final_score(cv_data, job_data)
-
-    # ── Étape 5 : sauvegarder en DB ──
-    _save_to_db(req.application_id, result["score"], result["resume"])
-
-    return {
-        "application_id": req.application_id,
-        "score":          result["score"],         # /10 — compatible DB
-        "score_100":      result["score_100"],     # /100 — pour le frontend
-        "resume":         result["resume"],
-        "breakdown":      result["breakdown"],
-        "explanation":    result["explanation"],
-        "structured_data": {                       # debug — données extraites par Groq
-            "cv":  cv_data,
-            "job": job_data
-        
-        },
-        
-        
-    }
-
-
-# ─────────────────────────────────────────────
-# Endpoint de matching direct (sans fichier)
-# ─────────────────────────────────────────────
-
-class MatchRequest(BaseModel):
-    cv_text: str
-    offre_title: str
-    offre_description: str
-    offre_requirements: str = ""
-
-
-@app.post("/match")
-def match_direct(req: MatchRequest):
-    """
-    Matching sans fichier — utile pour tester ou pour le frontend.
-    Envoie directement le texte du CV.
-    """
-    cv_text = clean_text(req.cv_text)
-    if not cv_text:
-        raise HTTPException(status_code=400, detail="CV vide")
-   
+    # ── Étape 4 : Groq → données structurées ──
     structured = extract_structured_data(
         cv_text           = cv_text,
         offre_title       = req.offre_title,
         offre_description = req.offre_description,
         offre_requirements= req.offre_requirements
     )
-    
+    print("🔥 GROQ OUTPUT:", structured)
+
     if structured.get("is_cv") is False:
-        return {"score": 0.0, "resume": "Document invalide : ce n'est pas un CV."}
+        result = {
+            "score": 0.0, "score_100": 0.0,
+            "resume": "Document invalide : ce fichier n'est pas un CV.",
+            "breakdown": {"skills": 0, "experience": 0, "semantic": 0, "projects": 0},
+            "explanation": "Le document fourni n'est pas un CV.",
+        }
+        _save_to_db(req.application_id, result["score"], result["resume"])
+        return {"application_id": req.application_id, **result}
 
     if structured.get("is_cv") is None:
-        raise HTTPException(status_code=502, detail=structured.get("error"))
+        raise HTTPException(status_code=502, detail=f"Erreur extraction Groq : {structured.get('error')}")
 
-    result = calculate_final_score(
-        cv_data  = structured.get("cv",  {}),
-        job_data = structured.get("job", {})
-    )
+    # ── Étape 5 : scoring ──
+    cv_data  = structured.get("cv",  {})
+    job_data = structured.get("job", {})
+    result   = calculate_final_score(cv_data, job_data)
+
+    _save_to_db(req.application_id, result["score"], result["resume"])
 
     return {
-        "score":       result["score"],
-        "score_100":   result["score_100"],
-        "resume":      result["resume"],
-        "breakdown":   result["breakdown"],
-        "explanation": result["explanation"],
-        "detail":      result["detail"],
-        "structured":  structured
-        
+        "application_id": req.application_id,
+        "score":          result["score"],
+        "score_100":      result["score_100"],
+        "resume":         result["resume"],
+        "breakdown":      result["breakdown"],
+        "explanation":    result["explanation"],
+        "structured_data": {"cv": cv_data, "job": job_data},
     }
-
 
 # ─────────────────────────────────────────────
 # Health check
