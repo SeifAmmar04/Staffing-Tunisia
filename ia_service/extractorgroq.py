@@ -4,7 +4,13 @@ from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = None
+
+def get_client():
+    global client
+    if client is None:
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    return client
 
 
 def extract_structured_data(cv_text: str, offre_title: str, offre_description: str, offre_requirements: str) -> dict:
