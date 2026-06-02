@@ -27,7 +27,7 @@ export default function ResetMailPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/auth/forgot-password", {
+      const res = await fetch("https://staffing-tunisia-1.onrender.com/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
