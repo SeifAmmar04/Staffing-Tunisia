@@ -11,7 +11,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-@Controller('candidatures')
+@Controller('applications')
 export class CandidaturesController {
   constructor(private readonly candidaturesService: CandidaturesService) {}
 
