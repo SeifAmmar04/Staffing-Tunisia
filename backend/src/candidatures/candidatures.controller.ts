@@ -11,6 +11,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+@Controller('candidatures')
 export class CandidaturesController {
   constructor(private readonly candidaturesService: CandidaturesService) {}
 
@@ -49,5 +50,25 @@ export class CandidaturesController {
       resume_path,
       body.message ?? null,
     );
+  }
+
+  @Get()
+  findAll() {
+    return this.candidaturesService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.candidaturesService.findById(Number(id));
+  }
+
+  @Patch(':id/status')
+  updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
+    return this.candidaturesService.updateStatus(Number(id), body.status);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.candidaturesService.delete(Number(id));
   }
 }
