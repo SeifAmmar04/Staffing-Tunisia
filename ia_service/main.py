@@ -122,7 +122,9 @@ def health():
         "architecture": ["extractor → Groq (structured)", "matching_engine (our algo)", "PostgreSQL"]
     }
 
-
+@app.get("/")
+def root():
+    return {"status": "ok"}
 # ─────────────────────────────────────────────
 # Helper DB
 # ─────────────────────────────────────────────
