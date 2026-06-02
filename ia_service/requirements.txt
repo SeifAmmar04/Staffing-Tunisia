@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pdfplumber
+python-docx
+docx2txt
+groq
+psycopg2-binary
+python-multipart
+requests
