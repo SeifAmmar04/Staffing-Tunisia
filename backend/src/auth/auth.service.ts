@@ -11,14 +11,16 @@ export class AuthService {
 
   // ✅ Transporter créé en méthode privée → .env déjà chargé au moment de l'appel
   private getTransporter() {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS,
-      },
-    });
-  }
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS,
+    },
+  });
+}
 
   // ─────────────────────────────────────────────
   // Google OAuth
