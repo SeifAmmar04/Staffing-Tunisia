@@ -10,6 +10,8 @@ Architecture :
 
 import os
 import psycopg2
+import urllib.request
+import tempfile
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -43,40 +45,75 @@ class ScoreRequest(BaseModel):
 
 
 # ─────────────────────────────────────────────
+# Root
+# ─────────────────────────────────────────────
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+
+# ─────────────────────────────────────────────
+# Health check
+# ─────────────────────────────────────────────
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "version": "2.0",
+        "architecture": ["extractor → Groq (structured)", "matching_engine (our algo)", "PostgreSQL"]
+    }
+
+
+# ─────────────────────────────────────────────
 # Endpoint principal
 # ─────────────────────────────────────────────
 
 @app.post("/score")
 def score_application(req: ScoreRequest):
-    import urllib.request
-    import tempfile
 
     # ── Étape 1 : télécharger le CV depuis Cloudinary ──
     try:
         with urllib.request.urlopen(req.resume_path) as response:
             cv_bytes = response.read()
+            content_type = response.headers.get('Content-Type', '')
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Impossible de télécharger le CV : {str(e)}")
 
-    # ── Étape 2 : sauvegarder temporairement ──
-    suffix = ".pdf" if "pdf" in req.resume_path.lower() else ".docx"
+    # ── Étape 2 : détecter le vrai type de fichier ──
+    if 'pdf' in content_type:
+        suffix = '.pdf'
+    elif 'word' in content_type or 'openxml' in content_type:
+        suffix = '.docx'
+    elif 'pdf' in req.resume_path.lower():
+        suffix = '.pdf'
+    elif 'docx' in req.resume_path.lower() or 'word' in req.resume_path.lower():
+        suffix = '.docx'
+    else:
+        # Détecter depuis les magic bytes (fiable à 100%)
+        suffix = '.pdf' if cv_bytes[:4] == b'%PDF' else '.docx'
+
+    print(f"📄 Fichier détecté comme : {suffix} (Content-Type: {content_type})")
+
+    # ── Étape 3 : sauvegarder temporairement ──
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(cv_bytes)
         tmp_path = tmp.name
 
-    # ── Étape 3 : extraction texte ──
+    # ── Étape 4 : extraction texte ──
     raw_text = extract_text(tmp_path)
     cv_text  = clean_text(raw_text)
 
     if not cv_text:
         raise HTTPException(status_code=400, detail="CV vide ou illisible")
 
-    # ── Étape 4 : Groq → données structurées ──
+    # ── Étape 5 : Groq → données structurées ──
     structured = extract_structured_data(
-        cv_text           = cv_text,
-        offre_title       = req.offre_title,
-        offre_description = req.offre_description,
-        offre_requirements= req.offre_requirements
+        cv_text            = cv_text,
+        offre_title        = req.offre_title,
+        offre_description  = req.offre_description,
+        offre_requirements = req.offre_requirements
     )
     print("🔥 GROQ OUTPUT:", structured)
 
@@ -93,7 +130,7 @@ def score_application(req: ScoreRequest):
     if structured.get("is_cv") is None:
         raise HTTPException(status_code=502, detail=f"Erreur extraction Groq : {structured.get('error')}")
 
-    # ── Étape 5 : scoring ──
+    # ── Étape 6 : scoring ──
     cv_data  = structured.get("cv",  {})
     job_data = structured.get("job", {})
     result   = calculate_final_score(cv_data, job_data)
@@ -101,30 +138,16 @@ def score_application(req: ScoreRequest):
     _save_to_db(req.application_id, result["score"], result["resume"])
 
     return {
-        "application_id": req.application_id,
-        "score":          result["score"],
-        "score_100":      result["score_100"],
-        "resume":         result["resume"],
-        "breakdown":      result["breakdown"],
-        "explanation":    result["explanation"],
+        "application_id":  req.application_id,
+        "score":           result["score"],
+        "score_100":       result["score_100"],
+        "resume":          result["resume"],
+        "breakdown":       result["breakdown"],
+        "explanation":     result["explanation"],
         "structured_data": {"cv": cv_data, "job": job_data},
     }
 
-# ─────────────────────────────────────────────
-# Health check
-# ─────────────────────────────────────────────
 
-@app.get("/health")
-def health():
-    return {
-        "status": "ok",
-        "version": "2.0",
-        "architecture": ["extractor → Groq (structured)", "matching_engine (our algo)", "PostgreSQL"]
-    }
-
-@app.get("/")
-def root():
-    return {"status": "ok"}
 # ─────────────────────────────────────────────
 # Helper DB
 # ─────────────────────────────────────────────
