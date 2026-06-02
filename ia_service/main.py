@@ -29,7 +29,11 @@ app = FastAPI(title="Staffing Tunisia - IA Service", version="2.0")
 # ─────────────────────────────────────────────
 
 def get_db():
-    return psycopg2.connect(os.getenv("DATABASE_URL"))
+    url = os.getenv("DATABASE_URL", "")
+    # Supprimer les paramètres non supportés par psycopg2
+    if "?" in url:
+        url = url.split("?")[0]
+    return psycopg2.connect(url)
 
 
 # ─────────────────────────────────────────────
