@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/Footer";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://staffing-tunisia-1.onrender.com";
 
 export default function OffreDetails() {
   const searchParams = useSearchParams();
