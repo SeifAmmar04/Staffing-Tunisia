@@ -90,7 +90,7 @@ export default function SignupPage() {
     }
 
     // 6. Email disponible → envoyer OTP
-    await fetch("http://localhost:5000/users/send-otp", {
+    await fetch("https://staffing-tunisia-1.onrender.com/users/send-otp", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ email: form.email }),
@@ -108,7 +108,7 @@ export default function SignupPage() {
     setLoading(true);
 
     // 1. Vérifier le code OTP
-    const verifyRes = await fetch("http://localhost:5000/users/verify-otp", {
+    const verifyRes = await fetch("https://staffing-tunisia-1.onrender.com/users/verify-otp", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ email: form.email, code: otpCode }),
@@ -122,7 +122,7 @@ export default function SignupPage() {
     }
 
     // 2. OTP correct → créer le compte
-    const res = await fetch("http://localhost:5000/users", {
+    const res = await fetch("https://staffing-tunisia-1.onrender.com/users", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
