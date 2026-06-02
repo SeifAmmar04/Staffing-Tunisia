@@ -53,7 +53,7 @@ export class CandidaturesService {
     offre_requirements: string;
   }) {
     try {
-      const response = await fetch('http://localhost:8000/score', {
+      const response = await fetch(`${process.env.IA_SERVICE_URL}/score`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
