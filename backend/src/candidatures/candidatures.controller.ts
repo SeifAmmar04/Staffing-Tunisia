@@ -1,7 +1,14 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
 import { CandidaturesService } from './candidatures.service';
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 @Controller('applications')
 export class CandidaturesController {
@@ -9,13 +16,6 @@ export class CandidaturesController {
 
   @Post()
   @UseInterceptors(FileInterceptor('resume', {
-    storage: diskStorage({
-      destination: './uploads/resumes',
-      filename: (req, file, cb) => {
-        const unique = Date.now() + '-' + file.originalname;
-        cb(null, unique);
-      },
-    }),
     fileFilter: (req, file, cb) => {
       const allowed = [
         'application/pdf',
@@ -25,13 +25,29 @@ export class CandidaturesController {
       if (allowed.includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(new Error('Format non autorisé. Veuillez uploader un CV en PDF ou Word.'), false);
+        cb(new Error('Format non autorisé.'), false);
       }
     },
     limits: { fileSize: 3 * 1024 * 1024 },
   }))
   async create(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
-    const resume_path = file?.path ?? body.existing_resume_path ?? null;
+    let resume_path = body.existing_resume_path ?? null;
+
+    if (file) {
+      // Upload vers Cloudinary
+      const url = await new Promise<string>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'staffing-tunisia/resumes', resource_type: 'raw' },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result.secure_url);
+          }
+        );
+        Readable.from(file.buffer).pipe(uploadStream);
+      });
+      resume_path = url;
+    }
+
     return this.service.create(
       +body.job_id,
       body.applicant_id ? +body.applicant_id : null,
@@ -40,7 +56,7 @@ export class CandidaturesController {
       body.email,
       body.phone,
       resume_path,
-      body.message ?? null,   // ← AJOUTÉ
+      body.message ?? null,
     );
   }
 
@@ -50,7 +66,6 @@ export class CandidaturesController {
   @Get(':id')
   findById(@Param('id') id: string) { return this.service.findById(+id); }
 
-  // ← PATCH au lieu de PUT, et route /:id direct (pas /:id/status)
   @Patch(':id')
   updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.service.updateStatus(+id, body.status);
