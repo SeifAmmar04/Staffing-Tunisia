@@ -16,7 +16,7 @@ import {
   FaHeadphones, FaGlobe, FaBrain, FaPalette, FaUtensils,
 } from "react-icons/fa6";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://staffing-tunisia-1.onrender.com";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Candidat = {
