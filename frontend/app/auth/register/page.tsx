@@ -76,7 +76,7 @@ export default function SignupPage() {
     setLoading(true);
 
     // 5. Vérifier si email existe déjà en BD
-    const checkRes = await fetch("http://localhost:5000/users/check-email", {
+    const checkRes = await fetch("https://staffing-tunisia-1.onrender.com/users/check-email", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ email: form.email }),
