@@ -1,113 +1,74 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { pool } from '../db';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { CandidaturesService } from './candidatures.service';
+import { v2 as cloudinary } from 'cloudinary';
+import { Readable } from 'stream';
 
-@Injectable()
-export class CandidaturesService {
-  async create(
-    job_id: number,
-    applicant_id: number | null,
-    first_name: string,
-    last_name: string,
-    email: string,
-    phone: string,
-    resume_path: string,
-    message: string,
-  ) {
-    const result = await pool.query(
-      `INSERT INTO "Application" (job_id, applicant_id, first_name, last_name, email, phone, resume_path, message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [job_id, applicant_id ?? null, first_name, last_name, email, phone, resume_path, message ?? null],
-    );
-    const application = result.rows[0];
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-    const offreResult = await pool.query(
-      `SELECT title, description, requirements FROM "Offre" WHERE id = $1`,
-      [job_id]
-    );
-    const offre = offreResult.rows[0];
+@Controller('candidatures')
+export class CandidaturesController {
+  constructor(private readonly candidaturesService: CandidaturesService) {}
 
-    console.log('🔍 offre:', offre);
-    console.log('🔍 resume_path:', resume_path);
-
-    if (offre && resume_path) {
-      this.callIaService({
-        application_id: application.id,
-        resume_path: resume_path,
-        offre_title: offre.title,
-        offre_description: offre.description || '',
-        offre_requirements: offre.requirements || ''
+  @Post()
+  @UseInterceptors(FileInterceptor('resume', {
+    storage: memoryStorage(),
+    fileFilter: (req, file, cb) => {
+      const allowed = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('Format non autorisé.'), false);
+    },
+    limits: { fileSize: 3 * 1024 * 1024 },
+  }))
+  async create(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
+    let resume_path = body.existing_resume_path ?? null;
+    if (file) {
+      const url = await new Promise<string>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'staffing-tunisia/resumes', resource_type: 'raw' },
+          (error, result) => error ? reject(error) : resolve(result!.secure_url)
+        );
+        Readable.from(file.buffer).pipe(uploadStream);
       });
-    } else {
-      console.warn('⚠️ callIaService ignoré — offre ou resume_path manquant');
+      resume_path = url;
     }
-
-    return application;
-  }
-
-  private async callIaService(data: {
-    application_id: number;
-    resume_path: string;
-    offre_title: string;
-    offre_description: string;
-    offre_requirements: string;
-  }) {
-    console.log('📡 IA_SERVICE_URL:', process.env.IA_SERVICE_URL);
-    console.log('📡 Data envoyée:', JSON.stringify(data));
-    try {
-      const response = await fetch(`${process.env.IA_SERVICE_URL}/score`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      console.log('📡 IA Response status:', response.status);
-      if (!response.ok) {
-        console.error('❌ IA Service error:', await response.text());
-      } else {
-        const result = await response.json();
-        console.log(`✅ Score IA : ${result.score}/10 — ${result.resume}`);
-      }
-    } catch (error) {
-      console.error('❌ IA Service inaccessible:', error.message);
-    }
-  }
-
-  async findAll() {
-    const result = await pool.query(
-      `SELECT a.*, o.title as job_title
-       FROM "Application" a
-       LEFT JOIN "Offre" o ON a.job_id = o.id
-       ORDER BY 
-         CASE WHEN a.status = 'PENDING' OR a.status IS NULL THEN 0 ELSE 1 END,
-         a."createdAt" DESC`
+    return this.candidaturesService.create(
+      body.job_id,
+      body.applicant_id ?? null,
+      body.first_name,
+      body.last_name,
+      body.email,
+      body.phone,
+      resume_path,
+      body.message ?? null,
     );
-    return result.rows;
   }
 
-  async findById(id: number) {
-    const result = await pool.query(
-      `SELECT * FROM "Application" WHERE id = $1`,
-      [id]
-    );
-    return result.rows[0];
+  @Get()
+  findAll() {
+    return this.candidaturesService.findAll();
   }
 
-  async updateStatus(id: number, status: string) {
-    const validStatuses = ['PENDING', 'ACCEPTED', 'REJECTED'];
-    if (!validStatuses.includes(status)) {
-      throw new HttpException('Statut invalide', HttpStatus.BAD_REQUEST);
-    }
-    const result = await pool.query(
-      `UPDATE "Application" SET status = $1 WHERE id = $2 RETURNING *`,
-      [status, id]
-    );
-    if (result.rows.length === 0)
-      throw new HttpException('Candidature non trouvée', HttpStatus.NOT_FOUND);
-    return result.rows[0];
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.candidaturesService.findById(Number(id));
   }
 
-  async delete(id: number) {
-    await pool.query(`DELETE FROM "Application" WHERE id = $1`, [id]);
-    return { message: 'Application supprimée' };
+  @Patch(':id/status')
+  updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
+    return this.candidaturesService.updateStatus(Number(id), body.status);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.candidaturesService.delete(Number(id));
   }
 }
