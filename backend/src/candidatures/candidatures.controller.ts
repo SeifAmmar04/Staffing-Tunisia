@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CandidaturesService } from './candidatures.service';
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
+import { memoryStorage } from 'multer';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,20 +17,21 @@ export class CandidaturesController {
 
   @Post()
   @UseInterceptors(FileInterceptor('resume', {
-    fileFilter: (req, file, cb) => {
-      const allowed = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ];
-      if (allowed.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Format non autorisé.'), false);
-      }
-    },
-    limits: { fileSize: 3 * 1024 * 1024 },
-  }))
+  storage: memoryStorage(), // ← AJOUTE CETTE LIGNE
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format non autorisé.'), false);
+    }
+  },
+  limits: { fileSize: 3 * 1024 * 1024 },
+}))
   async create(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
     let resume_path = body.existing_resume_path ?? null;
 
