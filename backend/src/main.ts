@@ -8,9 +8,14 @@ async function bootstrap() {
   // ✅ NestExpressApplication (pas juste NestFactory.create)
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.enableCors({
-    origin: 'http://localhost:3000',
-  });
+ app.enableCors({
+  origin: [
+    'http://localhost:3000',
+    'https://staffing-tunisia-trmu.vercel.app',
+    'https://staffing-tunisia-trmu-7ddkrjr3z.vercel.app',
+  ],
+  credentials: true,
+});
 
   // ✅ Servir le dossier uploads en statique
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
