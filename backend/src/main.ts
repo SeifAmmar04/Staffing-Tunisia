@@ -5,24 +5,22 @@ import { join } from 'path';
 import 'dotenv/config';
 
 async function bootstrap() {
-  // ✅ NestExpressApplication (pas juste NestFactory.create)
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+      'https://staffing-tunisia-trmu.vercel.app',
+      'https://staffing-tunisia-trmu-7ddkrjr3z.vercel.app',
+    ],
+    credentials: true,
+  });
 
- app.enableCors({
-  origin: [
-    'http://localhost:3000',
-    'https://staffing-tunisia-trmu.vercel.app',
-    'https://staffing-tunisia-trmu-7ddkrjr3z.vercel.app',
-  ],
-  credentials: true,
-});
-
-  // ✅ Servir le dossier uploads en statique
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
   });
 
-  await app.listen(process.env.PORT);
-  console.log("🚀 Server running on process.env.PORT ");
+  await app.listen(process.env.PORT || 3001);
+  console.log(`🚀 Server running on port ${process.env.PORT || 3001}`);
 }
 bootstrap();
