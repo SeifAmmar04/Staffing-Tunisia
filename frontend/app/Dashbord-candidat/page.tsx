@@ -9,7 +9,7 @@ import {
   FaLock, FaEdit, FaCheck, FaTimes, FaUpload, FaFilePdf,
 } from "react-icons/fa";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://staffing-tunisia-1.onrender.com";
 
 // ── Helpers localStorage ──────────────────────────────────────────────────────
 function lsGet(key: string): string | null {
