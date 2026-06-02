@@ -11,9 +11,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-@Controller('applications')
 export class CandidaturesController {
-  constructor(private readonly service: CandidaturesService) {}
+  constructor(private readonly candidaturesService: CandidaturesService) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('resume', {
@@ -30,7 +29,6 @@ export class CandidaturesController {
   }))
   async create(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
     let resume_path = body.existing_resume_path ?? null;
-
     if (file) {
       const url = await new Promise<string>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -41,30 +39,6 @@ export class CandidaturesController {
       });
       resume_path = url;
     }
-
-    return this.service.create(
-      +body.job_id,
-      body.applicant_id ? +body.applicant_id : null,
-      body.first_name,
-      body.last_name,
-      body.email,
-      body.phone,
-      resume_path,
-      body.message ?? null,
-    );
+    return this.candidaturesService.create({ ...body, resume_path });
   }
-
-  @Get()
-  findAll() { return this.service.findAll(); }
-
-  @Get(':id')
-  findById(@Param('id') id: string) { return this.service.findById(+id); }
-
-  @Patch(':id')
-  updateStatus(@Param('id') id: string, @Body() body: { status: string }) {
-    return this.service.updateStatus(+id, body.status);
-  }
-
-  @Delete(':id')
-  delete(@Param('id') id: string) { return this.service.delete(+id); }
 }
