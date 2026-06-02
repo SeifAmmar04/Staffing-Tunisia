@@ -33,12 +33,21 @@ export class CandidaturesController {
       const url = await new Promise<string>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           { folder: 'staffing-tunisia/resumes', resource_type: 'raw' },
-          (error, result) => error ? reject(error) : resolve(result.secure_url)
+          (error, result) => error ? reject(error) : resolve(result!.secure_url)
         );
         Readable.from(file.buffer).pipe(uploadStream);
       });
       resume_path = url;
     }
-    return this.candidaturesService.create({ ...body, resume_path });
+    return this.candidaturesService.create(
+      body.job_id,
+      body.applicant_id ?? null,
+      body.first_name,
+      body.last_name,
+      body.email,
+      body.phone,
+      resume_path,
+      body.message ?? null,
+    );
   }
 }
