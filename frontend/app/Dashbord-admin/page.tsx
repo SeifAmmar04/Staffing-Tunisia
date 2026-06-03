@@ -78,6 +78,7 @@ function parseServices(s?: string[] | string): string[] {
 }
 function buildCvUrl(resumePath?: string): string {
   if (!resumePath) return "";
+  if (resumePath.startsWith("http")) return resumePath;
   return `${API_URL}/${resumePath.replace(/\\/g, "/")}`;
 }
 
