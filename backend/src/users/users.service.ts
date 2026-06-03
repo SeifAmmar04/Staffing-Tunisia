@@ -2,6 +2,7 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { pool } from '../db';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class UsersService {
@@ -10,13 +11,34 @@ export class UsersService {
 
   private otpStore = new Map<string, { code: string; expiry: number }>();
 
-private transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,  // ← MAIL_USER → GMAIL_USER
-    pass: process.env.GMAIL_PASS,  // ← MAIL_PASS → GMAIL_PASS
-  },
-});
+async sendOtp(email: string) {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiry = Date.now() + 10 * 60 * 1000;
+
+  this.otpStore.set(email, { code, expiry });
+
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  await resend.emails.send({
+    from: 'Staffing Tunisia <onboarding@resend.dev>',
+    to: email,
+    subject: '🔐 Code de vérification - Staffing Tunisia',
+    html: `
+      <div style="font-family: Arial; padding: 20px; max-width: 500px;">
+        <h2 style="color: #dc2626;">Staffing Tunisia</h2>
+        <p>Votre code de vérification est :</p>
+        <div style="font-size: 36px; font-weight: bold; color: #dc2626;
+                    letter-spacing: 8px; padding: 20px; background: #f9f9f9;
+                    border-radius: 8px; text-align: center;">
+          ${code}
+        </div>
+        <p style="color: #888; margin-top: 16px;">Ce code expire dans <b>10 minutes</b>.</p>
+      </div>
+    `,
+  });
+
+  return { message: 'OTP envoyé' };
+}
 
   // ── READ ──────────────────────────────────────────────────────────────────
 
