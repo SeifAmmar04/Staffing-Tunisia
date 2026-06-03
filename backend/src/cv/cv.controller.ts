@@ -59,12 +59,11 @@ export class CvController {
     return await this.cvService.getUserCV(userIdNum);
   }
 
-  @Delete('user/:userId')
+@Delete('user/:userId')
   async deleteUserCV(@Param('userId') userId: string) {
     const userIdNum = parseInt(userId);
     if (isNaN(userIdNum)) throw new HttpException('ID utilisateur invalide', HttpStatus.BAD_REQUEST);
     await this.cvService.deleteUserCV(userIdNum);
     return { success: true, message: 'CV supprimé avec succès' };
   }
-}
 }
